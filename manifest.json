@@ -1,11 +1,11 @@
 {
-	"id": "pin-addon",
-	"name": "Pin Addon",
+	"id": "pin-enhancer",
+	"name": "Pin Enhancer",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
+	"description": "Enhances the pin function to block closing or changing the tab.",
+	"author": "Sheeplet1",
+	"authorUrl": "https://github.com/Sheeplet1",
 	"fundingUrl": "https://obsidian.md/pricing",
 	"isDesktopOnly": true
 }
