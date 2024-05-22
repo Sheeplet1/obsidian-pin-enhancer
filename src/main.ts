@@ -1,8 +1,10 @@
 import { Notice, Plugin } from "obsidian";
 
 export default class PinEnhancerPlugin extends Plugin {
-	private listenerMap: Map<Element, { middleClick: EventListener }> =
-		new Map();
+	// Map of a reference of a tab's header to their blockers.
+	private blockers: Map<Element, { middleClick: EventListener }> = new Map();
+
+	// Map of a reference to a tab's status containers to their observers
 	private observers: Map<Element, MutationObserver> = new Map();
 
 	async onload() {
@@ -14,7 +16,6 @@ export default class PinEnhancerPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on(
 				"layout-change",
-				// TODO: Change this to updatePinObservers when it is done
 				this.updatePinObservers.bind(this),
 			),
 		);
@@ -29,7 +30,7 @@ export default class PinEnhancerPlugin extends Plugin {
 			if (
 				leaf.getViewState().pinned &&
 				// @ts-expect-error - leaf.tabHeaderEl is private
-				!this.listenerMap.has(leaf.tabHeaderEl)
+				!this.blockers.has(leaf.tabHeaderEl)
 			) {
 				// @ts-expect-error - leaf.tabHeaderEl is private
 				this.addBlockers(leaf.tabHeaderEl);
@@ -41,8 +42,6 @@ export default class PinEnhancerPlugin extends Plugin {
 	 * Adds blockers to the tab to prevent closure.
 	 */
 	addBlockers(tab: Element) {
-		console.log("Adding Blocker");
-		console.log("Tab: ", tab);
 		///////// Blocking Functions /////////
 		const blockMiddleClick = (event: MouseEvent) => {
 			if (event.button !== 1) return;
@@ -56,7 +55,7 @@ export default class PinEnhancerPlugin extends Plugin {
 
 		tab.addEventListener("auxclick", blockMiddleClick, true);
 
-		this.listenerMap.set(tab, {
+		this.blockers.set(tab, {
 			middleClick: blockMiddleClick,
 		});
 	}
@@ -65,11 +64,10 @@ export default class PinEnhancerPlugin extends Plugin {
 	 * Remove blockers from the tab.
 	 */
 	removeBlockers(tab: Element) {
-		console.log("Removing blockers");
-		const listeners = this.listenerMap.get(tab);
-
+		const listeners = this.blockers.get(tab);
 		if (listeners) {
 			tab.removeEventListener("auxclick", listeners.middleClick, true);
+			this.blockers.delete(tab);
 		}
 	}
 
@@ -77,17 +75,21 @@ export default class PinEnhancerPlugin extends Plugin {
 	 * Initialies pin observers for all tabs.
 	 */
 	updatePinObservers() {
-		// TODO: Skip pins that have already been initialised. Will need to add
-		// a set to track this.
-
-		// @ts-expect-error - rootSplit.containerEl is private
-		this.app.workspace.rootSplit.containerEl
+		// @ts-expect-error - rootSplit.containerEl is
+		this.app.workspace.rootSplit?.containerEl
 			.querySelectorAll(".workspace-tab-header")
 			.forEach((tab: Element) => {
-				if (this.observers.has(tab)) return;
-
 				this.addPinObserver(tab);
 			});
+
+		// Cleaning up the observers map by removing any observers that are no
+		// longer needed
+		this.observers.forEach((observer, statusContainer) => {
+			if (statusContainer.isConnected) return;
+
+			observer.disconnect();
+			this.observers.delete(statusContainer);
+		});
 	}
 
 	/**
@@ -100,6 +102,23 @@ export default class PinEnhancerPlugin extends Plugin {
 		);
 
 		if (!statusContainer) return;
+
+		if (this.observers.has(statusContainer)) return;
+
+		// When a new tab is opened, it initially has a flex value of '0 0 auto'.
+		// However, when a tab is closed, it also temporarily has a flex value
+		// of '0 0 auto' before being removed from the DOM. This can cause
+		// confusion if we only check the flex value to determine if a tab is
+		// new or being closed. Therefore, we also need to check if the tab is
+		// the most recent tab to accurately determine if it is a new tab. If
+		// the tab is not the most recent tab, then it is in the process of
+		// being closed, and we do not need to add an observer to it.
+		if (
+			tab.getCssPropertyValue("flex") === "0 0 auto" &&
+			// @ts-expect-error - tabHeaderEl is private
+			this.app.workspace.getMostRecentLeaf().tabHeaderEl !== tab
+		)
+			return;
 
 		const observer = new MutationObserver((muts) => {
 			muts.forEach((mut) => {
@@ -125,10 +144,10 @@ export default class PinEnhancerPlugin extends Plugin {
 	onunload() {
 		console.log("Unloading PinEnhancerPlugin");
 
-		this.listenerMap.forEach((listeners, tab) => {
+		this.blockers.forEach((listeners, tab) => {
 			tab?.removeEventListener("auxclick", listeners.middleClick, true);
 		});
-		this.listenerMap.clear();
+		this.blockers.clear();
 
 		this.observers.forEach((observer) => {
 			observer.disconnect();
