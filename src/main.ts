@@ -1,4 +1,4 @@
-import { Notice, Plugin, View } from "obsidian";
+import { MarkdownView, Notice, Plugin } from "obsidian";
 
 export default class PinEnhancerPlugin extends Plugin {
 	// Map of a reference of a tab's header to their blockers.
@@ -8,12 +8,11 @@ export default class PinEnhancerPlugin extends Plugin {
 	private observers: Map<Element, MutationObserver> = new Map();
 
 	async onload() {
-		console.log("Loading PinEnhancerPlugin");
-
 		this.initialisePinnedTabs();
+
 		this.updatePinObservers();
 
-		this.addAltCloseCommand();
+		this.addAltCloseCommands();
 
 		this.registerEvent(
 			this.app.workspace.on(
@@ -147,13 +146,14 @@ export default class PinEnhancerPlugin extends Plugin {
 	 * Adds an alternative command for users to re-map "Ctrl-W" to close tabs.
 	 * This command will close tabs as normal, but will not close pinned tabs.
 	 */
-	addAltCloseCommand() {
+	addAltCloseCommands() {
 		// Close tab command (excluding pinned tabs)
 		this.addCommand({
 			id: "alt-close-tab",
 			name: "Close Tab",
 			callback: () => {
-				const leaf = this.app.workspace.getActiveViewOfType(View)?.leaf;
+				const leaf =
+					this.app.workspace.getActiveViewOfType(MarkdownView)?.leaf;
 
 				if (!leaf) return;
 
@@ -180,8 +180,6 @@ export default class PinEnhancerPlugin extends Plugin {
 	}
 
 	onunload() {
-		console.log("Unloading PinEnhancerPlugin");
-
 		this.blockers.forEach((listeners, tab) => {
 			tab?.removeEventListener("auxclick", listeners.middleClick, true);
 		});
