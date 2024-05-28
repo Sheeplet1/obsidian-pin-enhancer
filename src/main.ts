@@ -1,4 +1,4 @@
-import { Notice, Plugin } from "obsidian";
+import { Notice, Plugin, View } from "obsidian";
 
 export default class PinEnhancerPlugin extends Plugin {
 	// Map of a reference of a tab's header to their blockers.
@@ -12,6 +12,8 @@ export default class PinEnhancerPlugin extends Plugin {
 
 		this.initialisePinnedTabs();
 		this.updatePinObservers();
+
+		this.addAltCloseCommand();
 
 		this.registerEvent(
 			this.app.workspace.on(
@@ -139,6 +141,42 @@ export default class PinEnhancerPlugin extends Plugin {
 		this.observers.set(statusContainer, observer);
 
 		return observer;
+	}
+
+	/**
+	 * Adds an alternative command for users to re-map "Ctrl-W" to close tabs.
+	 * This command will close tabs as normal, but will not close pinned tabs.
+	 */
+	addAltCloseCommand() {
+		// Close tab command (excluding pinned tabs)
+		this.addCommand({
+			id: "alt-close-tab",
+			name: "Close Tab",
+			callback: () => {
+				const leaf = this.app.workspace.getActiveViewOfType(View)?.leaf;
+
+				if (!leaf) return;
+
+				if (leaf?.getViewState().pinned) {
+					new Notice("Cannot close pinned tab");
+				} else {
+					leaf?.detach();
+				}
+			},
+		});
+
+		// Close all other tabs command (excluding pinned tabs)
+		this.addCommand({
+			id: "alt-close-other-tabs",
+			name: "Close all other tabs",
+			callback: () => {
+				this.app.workspace.iterateAllLeaves((leaf) => {
+					if (leaf.getViewState().pinned) return;
+
+					leaf.detach();
+				});
+			},
+		});
 	}
 
 	onunload() {
