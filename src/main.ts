@@ -150,7 +150,7 @@ export default class PinEnhancerPlugin extends Plugin {
 		// Close tab command (excluding pinned tabs)
 		this.addCommand({
 			id: "alt-close-tab",
-			name: "Close Tab",
+			name: "Close tab",
 			callback: () => {
 				const leaf =
 					this.app.workspace.getActiveViewOfType(MarkdownView)?.leaf;
