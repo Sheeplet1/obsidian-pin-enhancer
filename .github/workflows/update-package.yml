@@ -1,0 +1,41 @@
+name: Update Package.json
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' 
+  workflow_dispatch:     
+
+jobs:
+  update-package:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Update dependencies
+        run: |
+          # Example: Update dependencies to their latest versions
+          npx npm-check-updates -u
+          npm install
+          
+      # Optional: Update version number
+      - name: Bump version
+        run: npm version patch -m "Bump version to %s [skip ci]"
+        
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: Update package.json
+          title: 'chore: update dependencies and bump version'
+          body: |
+            Automated changes:
+            - Updated dependencies to latest versions
+            - Bumped package version
+          branch: automated-package-updates
+          delete-branch: true 
