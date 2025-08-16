@@ -152,8 +152,11 @@ export default class PinEnhancerPlugin extends Plugin {
 			id: "alt-close-tab",
 			name: "Close tab",
 			callback: () => {
+				// Note that .getMostRecentLeaf() only looks at the main
+				// workspace, not the sidebars. This means the hotkey cannot be
+				// used to close tabs in sidebars.
 				const leaf =
-					this.app.workspace.getActiveViewOfType(MarkdownView)?.leaf;
+					this.app.workspace.getMostRecentLeaf();
 
 				if (!leaf) return;
 
